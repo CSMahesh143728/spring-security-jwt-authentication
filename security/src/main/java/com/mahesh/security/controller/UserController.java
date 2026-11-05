@@ -27,7 +27,11 @@ public class UserController {
 	public String deleteUser(@PathVariable Integer id) {
 		 service.delUser(id);
 		 return "User Deleted Succesfully";
-		
+	}
+	
+	@PostMapping("/login")
+	public String login(@RequestBody Users user) {
+		return service.verify(user);
 	}
 
 }

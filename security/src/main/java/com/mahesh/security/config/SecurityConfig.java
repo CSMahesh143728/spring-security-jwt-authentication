@@ -2,9 +2,11 @@ package com.mahesh.security.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -20,7 +22,9 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider provider) {
-		return http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(request -> request.anyRequest().authenticated())
+		return http.csrf(csrf -> csrf.disable())
+				.authorizeHttpRequests(request -> request.requestMatchers("/register", "/login").permitAll().anyRequest()
+						.authenticated())
 				.httpBasic(Customizer.withDefaults()).authenticationProvider(provider)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).build();
 	}
@@ -40,8 +44,13 @@ public class SecurityConfig {
 	@Bean
 	public AuthenticationProvider authenticationProvider(MyUserDetailsService detailsService) {
 		DaoAuthenticationProvider provider = new DaoAuthenticationProvider(detailsService);
-		provider.setPasswordEncoder(new  BCryptPasswordEncoder(10));
+		provider.setPasswordEncoder(new BCryptPasswordEncoder(10));
 		return provider;
+	}
+
+	@Bean
+	AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) {
+		return configuration.getAuthenticationManager();
 	}
 
 }
