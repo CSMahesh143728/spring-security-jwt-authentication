@@ -13,20 +13,29 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.mahesh.security.service.MyUserDetailsService;
+import com.mahesh.security.jwt.*;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+	
+	private final JWTFilter jwtfilter;
+
+	public SecurityConfig(JWTFilter jwtfilter) {
+		this.jwtfilter=jwtfilter;
+	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider provider) {
+	SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider provider) {
 		return http.csrf(csrf -> csrf.disable())
-				.authorizeHttpRequests(request -> request.requestMatchers("/register", "/login").permitAll().anyRequest()
-						.authenticated())
+				.authorizeHttpRequests(request -> request.requestMatchers("/register", "/login").permitAll()
+						.anyRequest().authenticated())
 				.httpBasic(Customizer.withDefaults()).authenticationProvider(provider)
-				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).build();
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.addFilterBefore(jwtfilter, UsernamePasswordAuthenticationFilter.class).build();
 	}
 
 //	UserDetails user1= User
@@ -42,7 +51,7 @@ public class SecurityConfig {
 //	}
 
 	@Bean
-	public AuthenticationProvider authenticationProvider(MyUserDetailsService detailsService) {
+	AuthenticationProvider authenticationProvider(MyUserDetailsService detailsService) {
 		DaoAuthenticationProvider provider = new DaoAuthenticationProvider(detailsService);
 		provider.setPasswordEncoder(new BCryptPasswordEncoder(10));
 		return provider;

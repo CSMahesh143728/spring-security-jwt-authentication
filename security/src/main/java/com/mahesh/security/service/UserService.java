@@ -6,6 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.mahesh.security.jwt.JWTService;
 import com.mahesh.security.model.Users;
 import com.mahesh.security.repo.UserRepo;
 
@@ -16,9 +17,12 @@ public class UserService {
 
 	private final AuthenticationManager manager;
 
-	public UserService(UserRepo repo, AuthenticationManager manager) {
+	private final JWTService service;
+
+	public UserService(UserRepo repo, AuthenticationManager manager, JWTService service) {
 		this.repo = repo;
 		this.manager = manager;
+		this.service = service;
 	}
 
 	private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder(10);
@@ -33,16 +37,16 @@ public class UserService {
 		repo.deleteById(id);
 	}
 
+	//Generate token
 	public String verify(Users user) {
 
 		Authentication authenticate = manager
 				.authenticate(new UsernamePasswordAuthenticationToken(user.getUserName(), user.getPassword()));
 
 		if (authenticate.isAuthenticated()) {
-			return "SUccess";
-		} else
-			return "Fail";
-
+			return service.generateToken(user.getUserName());
+		}
+		return "User Is Not Authenticated";
 	}
 
 }
