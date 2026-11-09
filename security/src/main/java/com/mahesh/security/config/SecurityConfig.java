@@ -33,7 +33,8 @@ public class SecurityConfig {
 		return http.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(request -> request.requestMatchers("/register", "/login").permitAll()
 						.anyRequest().authenticated())
-				.httpBasic(Customizer.withDefaults()).authenticationProvider(provider)
+				//.httpBasic(Customizer.withDefaults())
+				.authenticationProvider(provider)
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.addFilterBefore(jwtfilter, UsernamePasswordAuthenticationFilter.class).build();
 	}

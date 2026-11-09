@@ -4,9 +4,11 @@ import java.io.IOException;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.mahesh.security.service.MyUserDetailsService;
@@ -16,51 +18,83 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+@Component
 public class JWTFilter extends OncePerRequestFilter {
 
 	private final JWTService service;
 
-	private final ApplicationContext appContext;
+	// private final ApplicationContext appContext;
 
-	public JWTFilter(JWTService service, ApplicationContext appContext) {
+	private final MyUserDetailsService detailsService;
+
+	public JWTFilter(JWTService service, MyUserDetailsService usrDtlService) {
 		this.service = service;
-		this.appContext = appContext;
+		// this.appContext = appContext;
+		this.detailsService = usrDtlService;
+
 	}
 
 	@Override
-	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-			throws ServletException, IOException {
+	protected void doFilterInternal(
+	        HttpServletRequest request,
+	        HttpServletResponse response,
+	        FilterChain filterChain)
+	        throws ServletException, IOException {
 
-		// Extract Authorization Header
-		String authHeader = request.getHeader("Authorization");
+	    String authHeader = request.getHeader("Authorization");
 
-		// To get Token
-		String token = null;
+	    System.out.println("STEP 1: JWT Filter executed");
+	    System.out.println("Request URI: " + request.getRequestURI());
+	    System.out.println("Authorization header present: " + (authHeader != null));
 
-		// To get Username
-		String username = null;
+	    if (authHeader != null && authHeader.startsWith("Bearer ")) {
 
-		// Get token and username
-		if (authHeader != null && authHeader.startsWith("Bearer ")) {
-			token = authHeader.substring(7);
-			username = service.extractUsername(token);
-		}
+	        String token = authHeader.substring(7);
 
-		// Using Security context holder get authentication details if not authenticated
-		// then get username from our userdetails service validate it and then set the
-		// authentication object
-		if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-			UserDetails userByUsername = appContext.getBean(MyUserDetailsService.class).loadUserByUsername(username);
-			if (service.validateToken(token, userByUsername)) {
-				UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-						userByUsername, null, userByUsername.getAuthorities());
-				authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-				SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-			}
-		}
+	        System.out.println("STEP 2: Token extracted");
 
-		filterChain.doFilter(request, response);
+	        String username = service.extractUsername(token);
 
+	        System.out.println("STEP 3: Username: " + username);
+
+	        if (username != null &&
+	                SecurityContextHolder.getContext().getAuthentication() == null) {
+
+	            UserDetails userDetails =
+	                    detailsService.loadUserByUsername(username);
+
+	            System.out.println("STEP 4: User loaded");
+
+	            boolean valid = service.validateToken(token, userDetails);
+
+	            System.out.println("STEP 5: Token valid: " + valid);
+
+	            if (valid) {
+
+	                UsernamePasswordAuthenticationToken authentication =
+	                        new UsernamePasswordAuthenticationToken(
+	                                userDetails,
+	                                null,
+	                                userDetails.getAuthorities());
+
+	                authentication.setDetails(
+	                        new WebAuthenticationDetailsSource()
+	                                .buildDetails(request));
+
+	                SecurityContextHolder.getContext()
+	                        .setAuthentication(authentication);
+
+	                System.out.println("STEP 6: Authentication set successfully");
+	            }
+	        }
+	    }
+
+	    Authentication authentication =
+	            SecurityContextHolder.getContext().getAuthentication();
+
+	    System.out.println("Authentication object: " + authentication);
+
+	    filterChain.doFilter(request, response);
 	}
 
 }
